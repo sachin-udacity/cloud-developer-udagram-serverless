@@ -7,7 +7,7 @@ import { getAllTodos } from '../../businessLogic/todos'
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   console.log('Processing event :', event)
 
-  const todosItems = await getAllTodos()
+  const items = await getAllTodos()
 
   return {
     statusCode: 200,
@@ -15,7 +15,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       'Access-Control-Allow-Origin': '*'
     },
     body: JSON.stringify({
-      todosItems
+      items
     })
   }
 }
