@@ -11,7 +11,7 @@ export async function getAllTodos(): Promise<TodoItem[]> {
   return todosAccess.getAllTodos()
 }
 
-export async function CreateTodo(
+export async function createTodo(
   createTodoRequest: CreateTodoRequest,
   jwtToken: string
 ): Promise<TodoItem> {
