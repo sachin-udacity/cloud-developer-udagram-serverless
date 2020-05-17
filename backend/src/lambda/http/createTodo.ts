@@ -20,13 +20,22 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
   console.log('New todo item ', newTodoItem)
 
+  const item = {
+    todoId: newTodoItem.todoId,
+    createdAt: newTodoItem.createdAt,
+    name: newTodoItem.name,
+    dueDate: newTodoItem.dueDate,
+    done: newTodoItem.done,
+    attachmentUrl: newTodoItem.attachmentUrl
+  }
+
   return {
     statusCode: 201,
     headers: {
       'Access-Control-Allow-Origin': '*'
     },
     body: JSON.stringify({
-        newTodoItem
+        item
     })
   }
 }
