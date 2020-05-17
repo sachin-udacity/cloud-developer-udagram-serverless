@@ -28,6 +28,7 @@ export async function createTodo(
     createdAt: new Date().toISOString(),
     name: createTodoRequest.name,
     dueDate: createTodoRequest.dueDate,
+    attachmentUrl: '',
     done: false
   })
 }
@@ -36,12 +37,36 @@ export async function updateTodo(
   todoId: string,
   updateTodoRequest: UpdateTodoRequest, 
 ): Promise<TodoUpdate> {
-  return await todosAccess.updateTodo(
-    todoId,
-    {
-      name: updateTodoRequest.name,
-      dueDate: updateTodoRequest.dueDate,
-      done: updateTodoRequest.done
-    }
-  )
+  // check if id exists
+  const todoUpdate : TodoUpdate = {
+    name: updateTodoRequest.name,
+    dueDate: updateTodoRequest.dueDate,
+    done: updateTodoRequest.done
+  }
+  const isIdValid = await todosAccess.idExists(todoId)
+  if (!isIdValid) {
+    return todoUpdate;
+  } 
+
+  return await todosAccess.updateTodo(todoId, todoUpdate)
+}
+
+export async function deleteTodo(todoId: string) {
+  await todosAccess.deleteTodo(todoId)
+}
+
+export async function uploadImage(todoId: string) {
+  let uploadUrl = null;
+  // check if id exists
+  const isIdValid = await todosAccess.idExists(todoId)
+  if (!isIdValid) {
+    return uploadUrl;
+  }
+  // update db
+  const imageId = uuid.v4()
+  await todosAccess.updateImageUrl(todoId, imageId)
+  // get signed url
+  uploadUrl = await todosAccess.getUploadUrl(imageId)
+
+  return uploadUrl;
 }
