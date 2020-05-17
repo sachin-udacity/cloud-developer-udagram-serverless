@@ -16,19 +16,23 @@ provider:
 
   environment:
     TODOS_TABLE: Todos-${self:provider.stage}
-    IMAGES_TABLE: Images-${self:provider.stage}
+    TODOS_USERID_INDEX: UserIdIndex
     SIGNED_URL_EXPIRATION: 300
     IMAGES_S3_BUCKET: cloud-developer-${self:service.name}-${self:provider.stage}
 
   iamRoleStatements:
     - Effect: Allow
       Action: 
-        - dynamodb:Scan
+        - dynamodb:Query
         - dynamodb:PutItem
         - dynamodb:GetItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}    
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODOS_USERID_INDEX}
     - Effect: Allow
       Action:
         - s3:PutObject
@@ -141,9 +145,20 @@ resources:
         AttributeDefinitions:
           - AttributeName: todoId
             AttributeType: S
+          - AttributeName: userId
+            AttributeType: S        
         KeySchema:
           - AttributeName: todoId
             KeyType: HASH
+          - AttributeName: userId
+            KeyType: RANGE            
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.TODOS_USERID_INDEX}
+            KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            Projection:
+              ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.TODOS_TABLE}
 
