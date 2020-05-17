@@ -1,16 +1,20 @@
 import * as uuid from 'uuid'
 
 import { TodoItem } from '../models/TodoItem'
-import { TodosAccess } from '../dataLayer/todosAccess'
+import { TodosDBAccess } from '../dataLayer/todosDBAccess'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
 import { parseUserId } from '../auth/utils'
 import { TodoUpdate } from '../models/TodoUpdate'
+import { TodosFileAccess } from '../dataLayer/todosFileAccess'
 
-const todosAccess = new TodosAccess()
+const todosAccess = new TodosDBAccess()
+const todosFileAccess = new TodosFileAccess();
 
 export async function getTodosForUser(jwToken: string): Promise<TodoItem[]> {
   const userId: string = parseUserId(jwToken)
+
+  console.log('Getting TODOS item for ', userId)
   return todosAccess.getTodosForUser(userId)
 }
 
@@ -18,11 +22,11 @@ export async function createTodo(
   createTodoRequest: CreateTodoRequest,
   jwToken: string
 ): Promise<TodoItem> {
-
+  console.log('Deleting TODO item')
   const todoId = uuid.v4()
   const userId = parseUserId(jwToken)
-  console.log('Used id: ', userId)
 
+  console.log('Creating TODO item for ', userId)
   return await todosAccess.createTodo({
     userId: userId,
     todoId: todoId,
@@ -39,10 +43,13 @@ export async function updateTodo(
   todoId: string,
   updateTodoRequest: UpdateTodoRequest, 
 ): Promise<TodoUpdate> {
+  console.log('Updating TODO item')
+
   // get user from token
   const userId: string = parseUserId(jwToken)
-  console.log('Used id: ', userId)
+
   // check if id exists
+  console.log(`Verifying TODO item for ${userId} & ${todoId}`)
   const todoUpdate : TodoUpdate = {
     name: updateTodoRequest.name,
     dueDate: updateTodoRequest.dueDate,
@@ -53,12 +60,15 @@ export async function updateTodo(
     return todoUpdate;
   } 
 
+  console.log('Updating TODO item for ', userId)
   return await todosAccess.updateTodo(userId, todoId, todoUpdate)
 }
 
 export async function deleteTodo(jwToken: string, todoId: string) {
   // get user from token
   const userId = parseUserId(jwToken)
+
+  console.log(`Verifying TODO item for ${userId} & ${todoId}`)
   const isIdValid = await todosAccess.idExists(userId, todoId)
   if (!isIdValid) {
     return;
@@ -69,19 +79,26 @@ export async function deleteTodo(jwToken: string, todoId: string) {
 
 export async function uploadImage(jwToken: string, todoId: string) {
   let uploadUrl = null;
-    // get user from token
-    const userId = parseUserId(jwToken)
-    console.log('Used id: ', userId)
+  // get user from token
+  const userId = parseUserId(jwToken)
+  console.log('Processing upload image for user: ', userId)
+  
   // check if id exists
+  console.log(`Verifying TODO item for ${userId} & ${todoId}`)  
   const isIdValid = await todosAccess.idExists(userId, todoId)
   if (!isIdValid) {
+    console.log(`Failed to find todo for ${userId} and ${todoId}`)
     return uploadUrl;
   }
   // update db
   const imageId = uuid.v4()
-  await todosAccess.updateImageUrl(userId, todoId, imageId)
+  const imageUrl = todosFileAccess.getImageUrl(imageId)
+  await todosAccess.updateImageUrl(userId, todoId, imageUrl)
+  console.log(`Db updated for ${todoId} and user: ${userId}`)
+
   // get signed url
-  uploadUrl = await todosAccess.getUploadUrl(imageId)
+  uploadUrl = await todosFileAccess.getUploadUrl(imageId)
+  console.log(`Upload url generated for ${todoId} and user: ${userId}`)
 
   return uploadUrl;
 }

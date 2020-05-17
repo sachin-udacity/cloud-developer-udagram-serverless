@@ -1,24 +1,21 @@
 import * as AWS  from 'aws-sdk'
+import * as AWSXRay from 'aws-xray-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
-import { int } from 'aws-sdk/clients/datapipeline'
 
 import { TodoItem } from '../models/TodoItem'
 import { TodoUpdate } from '../models/TodoUpdate'
 
-export class TodosAccess {
+const XAWS = AWSXRay.captureAWS(AWS);
+
+export class TodosDBAccess {
 
   constructor(
-    private readonly docClient: DocumentClient = new AWS.DynamoDB.DocumentClient(),
+    private readonly docClient: DocumentClient = new XAWS.DynamoDB.DocumentClient(),
     private readonly todosTable = process.env.TODOS_TABLE,
-    private readonly userIdIndex = process.env.TODOS_USERID_INDEX,
-    private readonly s3 = new AWS.S3({ signatureVersion: 'v4'}),
-    private readonly s3BucketName = process.env.IMAGES_S3_BUCKET,
-    private readonly s3UrlExpiration: int = parseInt(process.env.SIGNED_URL_EXPIRATION)) {
+    private readonly userIdIndex = process.env.TODOS_USERID_INDEX) {
   }
 
   async getTodosForUser(userId: string): Promise<TodoItem[]> {
-    console.log('Getting TODOS item for ', userId)
-
     const result = await this.docClient.query({
       TableName : this.todosTable,
       IndexName : this.userIdIndex,
@@ -93,14 +90,13 @@ export class TodosAccess {
 
   async idExists(userId: string, todoId: string) {
     const result = await this.getTodo(userId, todoId)
-    console.log('Get id: ', result)
+    console.log(`Item check for : ${userId} & ${todoId} `, result)
     return !!result.Item
   }
 
-  async updateImageUrl(userId: string, todoId: string, imageId: string) {
-    // create image url
-    const imageUrl = `https://${this.s3BucketName}.s3.amazonaws.com/${imageId}`
-    console.log('Updating todo item: ', imageUrl)
+  async updateImageUrl(userId: string, todoId: string, imageUrl: string) {
+    console.log('Updating todo item image: ', imageUrl)
+
     // update db
     await this.docClient.update({
       TableName: this.todosTable,
@@ -113,14 +109,5 @@ export class TodosAccess {
           ":url": imageUrl
       }
     }).promise()
-  }
-
-  getUploadUrl(imageId: string) {
-    return this.s3.getSignedUrl('putObject', {
-      Bucket: this.s3BucketName,
-      Key: imageId,
-      Expires: this.s3UrlExpiration
-    })
-  }
-  
+  }  
 }
